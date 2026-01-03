@@ -2,7 +2,7 @@
 
 Apple App Store와 Samsung Galaxy Store 영수증을 통합 관리하는 웹 애플리케이션입니다.
 
-![Version](https://img.shields.io/badge/version-3.1-blue)
+![Version](https://img.shields.io/badge/version-3.3-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## ✨ 주요 기능
@@ -10,8 +10,8 @@ Apple App Store와 Samsung Galaxy Store 영수증을 통합 관리하는 웹 애
 - **🔄 통합 동기화**: iCloud(Apple)와 Gmail(Samsung) 이메일에서 영수증 자동 수집
 - **🏷️ 브랜드 자동 인식**: Apple과 Samsung 영수증을 자동으로 구분하여 파싱
 - **📅 날짜 필터링**: 원하는 기간의 영수증만 선택적으로 조회
-- **📊 지출 분석**: 총 지출 금액 및 구매 건수 실시간 확인
-- **📥 CSV 내보내기**: 엑셀 호환 CSV 파일로 내보내기
+- **📊 지출 분석**: 월별 바 차트 + 드릴다운 상세 보기
+- **📥 Excel 내보내기**: 월별 요약 + 전체 내역 두 시트로 구성된 XLSX 파일
 
 ## 🛠️ 기술 스택
 
@@ -21,6 +21,7 @@ Apple App Store와 Samsung Galaxy Store 영수증을 통합 관리하는 웹 애
 | **Backend** | Node.js, Express |
 | **Email** | IMAP (imapflow) |
 | **Parsing** | Cheerio, quoted-printable |
+| **Export** | ExcelJS (XLSX) |
 | **Deployment** | Vercel Serverless Functions |
 
 ## ⚡ 빠른 시작
@@ -120,12 +121,15 @@ Push 시 자동 배포됩니다.
 ### 날짜 범위
 기본값은 3개월 전부터 오늘까지입니다. UI에서 시작 날짜를 변경할 수 있습니다.
 
-### CSV 컬럼
-내보내기 CSV에는 다음 컬럼이 포함됩니다:
-- 연도, 월, 일
-- 플랫폼 (Apple/Samsung)
-- 주문번호
-- 앱이름, 상품명
+### Excel 내보내기
+내보내기 XLSX 파일에는 두 개의 시트가 포함됩니다:
+
+**월별 요약 시트:**
+- 연도, 월, 총 금액, 구매 건수
+
+**전체 내역 시트:**
+- 날짜, 플랫폼 (Apple/Samsung)
+- 주문번호, 앱이름, 상품명
 - 금액, 금액(숫자)
 
 ## 🐛 문제 해결

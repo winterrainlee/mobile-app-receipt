@@ -48,7 +48,6 @@ h1 {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
   padding: 12px 20px;
   background: rgba(255, 255, 255, 0.6);
   border-radius: 12px;
@@ -280,4 +279,184 @@ h1 {
 
 .fade-in {
   animation: fadeIn 0.5s ease forwards;
+}
+
+/* Controls Row */
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* View Mode Selector */
+.view-mode-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.view-mode-selector label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.view-mode-selector select {
+  padding: 8px 16px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  color: var(--text-main);
+  cursor: pointer;
+  min-width: 160px;
+}
+
+.view-mode-selector select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+/* Bar Chart */
+.chart-container {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.bar-chart {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 12px;
+  height: 240px;
+  padding: 20px 0;
+}
+
+.bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.bar-wrapper:hover {
+  transform: scale(1.05);
+}
+
+.bar-wrapper.active .bar {
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+}
+
+.bar-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  white-space: nowrap;
+}
+
+.bar {
+  width: 40px;
+  min-height: 4px;
+  background: linear-gradient(180deg, #34c759 0%, #30d158 100%);
+  border-radius: 6px 6px 0 0;
+  transition: all 0.3s ease;
+}
+
+.bar-month {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-top: 8px;
+}
+
+/* Monthly Group Accordion */
+.monthly-group {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.monthly-group:last-child {
+  border-bottom: none;
+}
+
+.monthly-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.monthly-header:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.monthly-header.expanded {
+  background: rgba(102, 126, 234, 0.05);
+  border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.monthly-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.monthly-info h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.monthly-count {
+  font-size: 13px;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.monthly-total {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.expand-icon {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.monthly-details {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.receipt-item.sub-item {
+  padding-left: 48px;
+  border-left: 3px solid rgba(102, 126, 234, 0.3);
 }

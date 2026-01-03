@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import ExcelJS from 'exceljs';
 import { fetchAllReceipts } from './imap-client.js';
 import { parseReceipt } from './receipt-parser.js';
 
@@ -63,27 +64,96 @@ app.get('/api/sync', async (req, res) => {
     }
 });
 
-app.get('/api/export-csv', async (req, res) => {
+
+// XLSX export with two sheets: Monthly Summary + All Receipts
+app.get('/api/export-xlsx', async (req, res) => {
     try {
         const startDate = getStartDate(req.query.startDate);
         const allItems = await getSyncData(startDate);
-        const csvHeader = '연도,월,일,플랫폼,주문번호,앱이름,상품명,금액,금액(숫자)\n';
-        const csvRows = allItems.map(r => {
+
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'In-app Purchase Manager';
+        workbook.created = new Date();
+
+        // Sheet 1: Monthly Summary
+        const summarySheet = workbook.addWorksheet('월별 요약');
+        summarySheet.columns = [
+            { header: '연도', key: 'year', width: 10 },
+            { header: '월', key: 'month', width: 8 },
+            { header: '총 금액', key: 'total', width: 15 },
+            { header: '구매 건수', key: 'count', width: 12 }
+        ];
+
+        // Group by month
+        const monthly = {};
+        allItems.forEach(r => {
             const d = new Date(r.date);
-            const year = d.getFullYear();
-            const month = d.getMonth() + 1;
-            const day = d.getDate();
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (!monthly[key]) {
+                monthly[key] = { year: d.getFullYear(), month: d.getMonth() + 1, total: 0, count: 0 };
+            }
+            const val = parseFloat((r.price || '0').replace(/[₩,]/g, '')) || 0;
+            monthly[key].total += val;
+            monthly[key].count += 1;
+        });
+
+        const monthlyRows = Object.values(monthly).sort((a, b) =>
+            a.year !== b.year ? a.year - b.year : a.month - b.month
+        );
+        monthlyRows.forEach(row => summarySheet.addRow(row));
+
+        // Style header row
+        summarySheet.getRow(1).font = { bold: true };
+        summarySheet.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFE0E0E0' }
+        };
+
+        // Sheet 2: All Receipts
+        const detailSheet = workbook.addWorksheet('전체 내역');
+        detailSheet.columns = [
+            { header: '날짜', key: 'date', width: 12 },
+            { header: '플랫폼', key: 'platform', width: 10 },
+            { header: '주문번호', key: 'orderId', width: 20 },
+            { header: '앱이름', key: 'appName', width: 20 },
+            { header: '상품명', key: 'productName', width: 25 },
+            { header: '금액', key: 'price', width: 12 },
+            { header: '금액(숫자)', key: 'numericPrice', width: 12 }
+        ];
+
+        allItems.forEach(r => {
+            const d = new Date(r.date);
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             const numericPrice = r.price ? parseFloat(r.price.replace(/[₩,]/g, '')) : 0;
-            return `${year},${month},${day},"${r.platform}","${r.orderId || 'N/A'}","${r.appName || ''}","${r.productName || ''}","${r.price || '미확인'}",${numericPrice}`;
-        }).join('\n');
+            detailSheet.addRow({
+                date: dateStr,
+                platform: r.platform,
+                orderId: r.orderId || 'N/A',
+                appName: r.appName || '',
+                productName: r.productName || '',
+                price: r.price || '미확인',
+                numericPrice: numericPrice
+            });
+        });
 
-        const csvContent = '\uFEFF' + csvHeader + csvRows;
+        // Style header row
+        detailSheet.getRow(1).font = { bold: true };
+        detailSheet.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFE0E0E0' }
+        };
 
-        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-        res.setHeader('Content-Disposition', 'attachment; filename=integrated_receipts_v3.csv');
-        res.send(csvContent);
+        // Generate file
+        const today = new Date().toISOString().split('T')[0];
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=receipts_${today}.xlsx`);
+        res.send(buffer);
     } catch (error) {
-        console.error('Error exporting CSV:', error);
+        console.error('Error exporting XLSX:', error);
         res.status(500).json({ error: error.message });
     }
 });
