@@ -31,15 +31,55 @@ body {
 
 .header {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
   margin-bottom: 40px;
+  text-align: center;
 }
 
 h1 {
   font-size: 32px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  margin-bottom: 20px;
+}
+
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.date-filter label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.date-filter input[type="date"] {
+  padding: 8px 12px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.date-filter input[type="date"]:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.date-hint {
+  font-size: 13px;
+  color: #86868b;
 }
 
 .version {
@@ -171,11 +211,39 @@ h1 {
   font-size: 13px;
 }
 
+.brand-tag-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.brand-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.brand-tag.apple {
+  background: #f5f5f7;
+  color: #1d1d1f;
+  border: 1px solid #d2d2d7;
+}
+
+.brand-tag.samsung {
+  background: #eef1ff;
+  color: #0c4da2;
+  border: 1px solid #c8d1ff;
+}
+
 .app-name {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 4px;
   color: var(--text-main);
+  margin: 0;
 }
 
 .product-name {

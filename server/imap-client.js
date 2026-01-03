@@ -1,66 +1,132 @@
 import { ImapFlow } from 'imapflow';
 import dotenv from 'dotenv';
-dotenv.config({ path: '../.env' });
 
-/**
- * Fetches Apple receipt emails from iCloud IMAP
- */
-export async function fetchAppleReceipts() {
-    const client = new ImapFlow({
-        host: 'imap.mail.me.com',
+dotenv.config();
+
+const createClient = (host, user, pass) => {
+    return new ImapFlow({
+        host: host,
         port: 993,
         secure: true,
         auth: {
-            user: process.env.ICLOUD_EMAIL,
-            pass: process.env.ICLOUD_PASSWORD
+            user: user,
+            pass: pass
         },
         logger: false
     });
+};
 
+/**
+ * Fetches Apple receipts from iCloud IMAP
+ * @param {Date} startDate - The start date for filtering emails
+ */
+export async function fetchAppleReceipts(startDate) {
+    const client = createClient('imap.mail.me.com', process.env.ICLOUD_EMAIL, process.env.ICLOUD_PASSWORD);
     await client.connect();
 
-    let receipts = [];
     let lock = await client.getMailboxLock('INBOX');
+    const receipts = [];
+
     try {
-        // Search for actual receipt emails from Apple Store/iTunes
-        // Look for emails with "receipt" or "영수증" in subject OR body
-        // from Apple's receipt sender
-        console.log('Searching for receipt emails...');
+        console.log(`Searching iCloud for Apple receipts since ${startDate.toISOString().split('T')[0]}...`);
 
-        // Strategy: Get all emails from Apple's receipt sender first
-        let messages = await client.search({
-            from: 'no_reply@email.apple.com'
-        });
+        const searchCriteria = {
+            from: 'no_reply@email.apple.com',
+            since: startDate
+        };
 
-        console.log(`Found ${messages.length} emails from no_reply@email.apple.com`);
+        const sequence = await client.search(searchCriteria);
 
-        for (let uid of messages) {
-            let message = await client.fetchOne(uid, { source: true, envelope: true });
-            const subject = message.envelope.subject || '';
-            const html = message.source.toString();
+        if (sequence.length > 0) {
+            for await (let message of client.fetch(sequence, { envelope: true, source: true })) {
+                const subject = message.envelope.subject || '';
+                console.log(`- Found Apple mail: ${subject}`);
+                const html = message.source.toString();
 
-            // Filter: Only keep emails that are actually receipts
-            // Receipt emails contain keywords like "receipt", "invoice", "영수증", "주문" etc.
-            const isReceipt = /receipt|invoice|영수증|주문|구입|purchase/i.test(subject) ||
-                /주문\s*ID|Order\s*ID|문서.*\d{12}|₩|총계|합계/i.test(html);
+                const isReceipt = /receipt|영수증|주문|구입|purchase|₩|총계|합계/i.test(subject + html);
 
-            if (isReceipt) {
-                receipts.push({
-                    uid: message.uid,
-                    subject: subject,
-                    date: message.envelope.date,
-                    html: html
-                });
-            } else {
-                console.log(`Skipping non-receipt email: ${subject.substring(0, 50)}...`);
+                if (isReceipt) {
+                    receipts.push({
+                        uid: message.uid,
+                        subject,
+                        date: message.envelope.date,
+                        html,
+                        platform: 'Apple'
+                    });
+                }
             }
         }
-
-        console.log(`Filtered to ${receipts.length} actual receipt emails`);
     } finally {
         lock.release();
+        await client.logout();
     }
 
-    await client.logout();
     return receipts;
+}
+
+/**
+ * Fetches Samsung receipts from Gmail IMAP
+ * @param {Date} startDate - The start date for filtering emails
+ */
+export async function fetchSamsungReceipts(startDate) {
+    if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
+        console.log('Gmail credentials not found in env, skipping Samsung receipts.');
+        return [];
+    }
+
+    const client = createClient('imap.gmail.com', process.env.GMAIL_EMAIL, process.env.GMAIL_PASSWORD);
+    await client.connect();
+
+    const mailboxes = await client.list();
+    const allMailBox = mailboxes.find(mb => mb.path.includes('All Mail') || mb.path.includes('전체 보관함'))?.path || 'INBOX';
+
+    let lock = await client.getMailboxLock(allMailBox);
+    const receipts = [];
+
+    try {
+        console.log(`Searching Samsung receipts in ${allMailBox} since ${startDate.toISOString().split('T')[0]}...`);
+
+        const searchCriteria = {
+            from: 'applicationstore@samsung.com',
+            since: startDate
+        };
+
+        const sequence = await client.search(searchCriteria);
+
+        if (sequence.length > 0) {
+            for await (let message of client.fetch(sequence, { envelope: true, source: true })) {
+                const subject = message.envelope.subject || '';
+                console.log(`- Found Samsung mail: ${subject}`);
+                const html = message.source.toString();
+
+                if (subject.includes('구매 영수증') || subject.includes('Purchase Receipt')) {
+                    receipts.push({
+                        uid: message.uid,
+                        subject,
+                        date: message.envelope.date,
+                        html,
+                        platform: 'Samsung'
+                    });
+                }
+            }
+        }
+    } finally {
+        lock.release();
+        await client.logout();
+    }
+
+    return receipts;
+}
+
+/**
+ * Combined fetching for both platforms
+ * @param {Date} startDate - The start date for filtering emails
+ */
+export async function fetchAllReceipts(startDate) {
+    const [apple, samsung] = await Promise.all([
+        fetchAppleReceipts(startDate).catch(e => { console.error('Apple fetch error:', e); return []; }),
+        fetchSamsungReceipts(startDate).catch(e => { console.error('Samsung fetch error:', e); return []; })
+    ]);
+
+    return [...apple, ...samsung];
 }

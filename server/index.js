@@ -1,10 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { fetchAppleReceipts } from './imap-client.js';
+import { fetchAllReceipts } from './imap-client.js';
 import { parseReceipt } from './receipt-parser.js';
-import fs from 'fs';
-import path from 'path';
 
 dotenv.config();
 
@@ -14,29 +12,31 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 
-// API routes logic
-const getSyncData = async () => {
-    console.log('Fetching receipts...');
-    const rawReceipts = await fetchAppleReceipts();
-
-    if (rawReceipts.length > 0 && process.env.NODE_ENV !== 'production') {
-        const debugDir = './debug';
-        if (!fs.existsSync(debugDir)) {
-            fs.mkdirSync(debugDir);
-        }
-        fs.writeFileSync(
-            path.join(debugDir, 'sample_receipt.html'),
-            rawReceipts[0].html,
-            'utf-8'
-        );
+// Parse startDate from query or default to 3 months ago
+const getStartDate = (queryDate) => {
+    if (queryDate) {
+        return new Date(queryDate);
     }
+    const date = new Date();
+    date.setMonth(date.getMonth() - 3);
+    return date;
+};
+
+// API routes logic
+const getSyncData = async (startDate) => {
+    console.log(`Fetching receipts from all sources since ${startDate.toISOString().split('T')[0]}...`);
+    const rawReceipts = await fetchAllReceipts(startDate);
+    console.log(`Found ${rawReceipts.length} total raw receipts.`);
 
     const allItems = [];
+
     rawReceipts.forEach(r => {
         const parsed = parseReceipt(r.html);
+
         parsed.items.forEach(item => {
             allItems.push({
                 uid: r.uid,
+                platform: r.platform,
                 subject: r.subject,
                 date: r.date,
                 orderId: parsed.orderId,
@@ -47,13 +47,15 @@ const getSyncData = async () => {
         });
     });
 
+    // Sort by date descending
     allItems.sort((a, b) => new Date(b.date) - new Date(a.date));
     return allItems;
 };
 
 app.get('/api/sync', async (req, res) => {
     try {
-        const data = await getSyncData();
+        const startDate = getStartDate(req.query.startDate);
+        const data = await getSyncData(startDate);
         res.json(data);
     } catch (error) {
         console.error('Error syncing receipts:', error);
@@ -63,21 +65,22 @@ app.get('/api/sync', async (req, res) => {
 
 app.get('/api/export-csv', async (req, res) => {
     try {
-        const allItems = await getSyncData();
-        const csvHeader = '연도,월,일,주문번호,앱이름,상품명,금액,금액(숫자)\n';
+        const startDate = getStartDate(req.query.startDate);
+        const allItems = await getSyncData(startDate);
+        const csvHeader = '연도,월,일,플랫폼,주문번호,앱이름,상품명,금액,금액(숫자)\n';
         const csvRows = allItems.map(r => {
             const d = new Date(r.date);
             const year = d.getFullYear();
             const month = d.getMonth() + 1;
             const day = d.getDate();
             const numericPrice = r.price ? parseFloat(r.price.replace(/[₩,]/g, '')) : 0;
-            return `${year},${month},${day},"${r.orderId || 'N/A'}","${r.appName || ''}","${r.productName || ''}","${r.price || '미확인'}",${numericPrice}`;
+            return `${year},${month},${day},"${r.platform}","${r.orderId || 'N/A'}","${r.appName || ''}","${r.productName || ''}","${r.price || '미확인'}",${numericPrice}`;
         }).join('\n');
 
         const csvContent = '\uFEFF' + csvHeader + csvRows;
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-        res.setHeader('Content-Disposition', 'attachment; filename=apple_receipts_v2.csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=integrated_receipts_v3.csv');
         res.send(csvContent);
     } catch (error) {
         console.error('Error exporting CSV:', error);
