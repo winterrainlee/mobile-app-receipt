@@ -674,7 +674,9 @@ h1 {
     flex-direction: column;
   }
 
-  .dashboard-grid {
+  /* Corrected selectors for dashboard grids */
+  .detail-dashboard,
+  .monthly-dashboard {
     grid-template-columns: 1fr;
   }
 
@@ -682,5 +684,35 @@ h1 {
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
+  }
+
+  /* Graph horizontal scrolling for mobile */
+  .chart-container {
+    overflow-x: auto;
+    /* Enable scrolling */
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scrolling on iOS */
+  }
+
+  .bar-chart {
+    height: 240px;
+    padding: 20px 0;
+    /* Ensure minimum width for bars/gap so it triggers scroll if needed */
+    min-width: 100%;
+    width: max-content;
+    /* Allow it to grow beyond container width */
+    justify-content: flex-start;
+    /* Align to start so scroll works from left */
+    margin: 0 auto;
+    /* Center if it fits within screen, though flex-start overrides this for flex items usually, 
+           but width: max-content makes the container large. 
+           Let's use a safer approach for centering vs scrolling. */
+  }
+
+  .bar-wrapper {
+    min-width: 50px;
+    /* Prevent bars from being too thin */
+    flex-shrink: 0;
+    /* Prevent squeezing */
   }
 }
