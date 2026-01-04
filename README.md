@@ -1,15 +1,16 @@
-# Mobile App Receipt Manager v3.4
+# Mobile App Receipt Manager v3.5
 
 **Apple App Store**와 **Samsung Galaxy Store**의 앱 구독 및 인앱 결제 내역을 통합 관리하는 스마트 대시보드입니다.
 
-![Monthly Dashboard](docs/screenshots/monthly_view.png)
+![Total Dashboard](docs/screenshots/dashboard_tabs_total.png)
 
 ## 🚀 주요 기능
 
 ### 📊 스마트 대시보드
-- **전체 기록 보기 (Detail View)**: 총 지출액, 구매 건수, 전체 기간의 카테고리별 지출 분포를 한눈에 파악할 수 있습니다.
-- **월별 총액 보기 (Monthly View)**: 월별 지출 추세, 예산 달성률, 월별 카테고리 통계에 집중할 수 있습니다.
-- **분할 레이아웃 (Split Layout)**: 정보 밀도를 높인 최적화된 2열 그리드 디자인을 제공합니다.
+- **탭 기반 탐색**: [전체 보기], [월별 보기], [Top 5 앱] 탭을 통해 직관적으로 화면을 전환할 수 있습니다.
+- **Top 5 앱 분석**: 가장 많이 지출한 상위 5개 앱을 선정하여 보여줍니다.
+- **상세 보기 (Drill-down)**: Top 5 앱을 클릭하면 해당 앱의 월별 지출 추이를 막대 그래프로 상세하게 확인할 수 있습니다.
+- **월별 총액 보기**: 월별 지출 추세와 예산 달성률을 한눈에 파악할 수 있습니다.
 
 ### 🧠 스마트 카테고리 감지 (Smart Category Detection)
 - **iTunes API 연동**: 앱 이름(예: Minecraft, KakaoTalk)을 기반으로 정확한 카테고리(게임, 엔터 등)를 자동으로 찾아냅니다.
@@ -155,11 +156,15 @@ npm run stop
 - **Backend**: Node.js, Express
 - **API**: Apple iTunes Search API (무료/공개 API 사용)
 
-## 📸 스크린샷
+## 📸 스크린샷 (Screenshots)
 
-| 월별 보기 (필터링 적용) | 예산 관리 통합 |
-|-------------------------|----------------|
-| ![Monthly View](docs/screenshots/monthly_view.png) | ![Budget Section](docs/screenshots/budget_section.png) |
+| 전체 보기 (All View) | 월별 보기 (Monthly View) |
+|----------------------|--------------------------|
+| ![Detail View](docs/screenshots/dashboard_tabs_total.png) | ![Monthly View](docs/screenshots/dashboard_tabs_monthly.png) |
+
+| Top 5 앱 (Top 5 Apps) |
+|-----------------------|
+| ![Top 5 Apps](docs/screenshots/dashboard_tabs_top5.png) |
 
 ## 📝 라이선스 (License)
 

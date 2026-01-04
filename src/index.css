@@ -716,3 +716,199 @@ h1 {
     /* Prevent squeezing */
   }
 }
+
+/* Tab Navigation */
+.tab-container {
+  display: flex;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  gap: 8px;
+  margin-bottom: 30px;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.tab-item:hover {
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--text-main);
+}
+
+.tab-item.active {
+  background: white;
+  color: var(--primary);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Top 5 Dashboard */
+.top5-dashboard {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.rank-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.rank-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.rank-item {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.rank-item:hover {
+  transform: translateY(-3px);
+}
+
+.rank-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 2;
+}
+
+.rank-app-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rank-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  /* dynamic background based on category */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.rank-details h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.rank-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #f5f5f7;
+  color: var(--text-muted);
+  font-weight: 600;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.rank-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.rank-bar-bg {
+  height: 12px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.rank-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 768px) {
+  .tab-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Drill-down Chart Styles */
+.rank-item.expanded {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  transform: scale(1.01);
+}
+
+.app-monthly-chart {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.mini-chart-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 120px;
+  padding: 10px 0;
+}
+
+.mini-bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.mini-bar-label {
+  font-size: 10px;
+  color: #86868b;
+  margin-bottom: 4px;
+}
+
+.mini-bar {
+  width: 16px;
+  border-radius: 4px;
+  min-height: 4px;
+  transition: height 0.5s ease;
+  opacity: 0.8;
+}
+
+.mini-bar:hover {
+  opacity: 1;
+}
+
+.mini-bar-month {
+  font-size: 11px;
+  color: var(--text-main);
+  margin-top: 6px;
+  font-weight: 500;
+}

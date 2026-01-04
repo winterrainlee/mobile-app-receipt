@@ -9,12 +9,21 @@ const CATEGORY_COLORS = {
     '기타': { bg: '#f3f4f6', text: '#6b7280', border: '#e5e7eb' },
 };
 
+const CATEGORY_ICONS = {
+    '게임': '🎮',
+    '생산성': '📱',
+    '엔터': '🎵',
+    '건강': '💪',
+    '기타': '📦',
+};
+
 function App() {
     const [receipts, setReceipts] = useState([]);
     const [loading, setLoading] = useState(false);
     // total is now calculated from filteredReceipts
-    const [viewMode, setViewMode] = useState('detail'); // 'detail' | 'monthly'
+    const [viewMode, setViewMode] = useState('detail'); // 'detail' | 'monthly' | 'top5'
     const [expandedMonth, setExpandedMonth] = useState(null);
+    const [expandedApp, setExpandedApp] = useState(null);
     const [categoryFilter, setCategoryFilter] = useState('전체');
 
     // Budget state with localStorage persistence
@@ -68,6 +77,60 @@ function App() {
     const maxMonthlyTotal = useMemo(() => {
         return Math.max(...monthlyData.map(m => m.total), 1);
     }, [monthlyData]);
+
+    // 5. Top 5 Apps calculation
+    const topAppsData = useMemo(() => {
+        const appStats = {};
+        filteredReceipts.forEach(r => {
+            const appName = r.appName || '알 수 없음';
+            const val = parseFloat((r.price || '0').replace(/[₩,]/g, '')) || 0;
+            // Use the first occurring category for the app
+            if (!appStats[appName]) {
+                appStats[appName] = {
+                    name: appName,
+                    category: r.category || '기타',
+                    total: 0,
+                    count: 0
+                };
+            }
+            appStats[appName].total += val;
+            appStats[appName].count += 1;
+        });
+
+        return Object.values(appStats)
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5);
+    }, [filteredReceipts]);
+
+    const maxTopAppTotal = useMemo(() => {
+        return Math.max(...topAppsData.map(d => d.total), 1);
+    }, [topAppsData]);
+
+    // 6. Get monthly data for a specific app
+    const getAppMonthlyData = (appName) => {
+        const appReceipts = filteredReceipts.filter(r => (r.appName || '알 수 없음') === appName);
+        const grouped = {};
+
+        // Init with last 6 months or range based on existing data
+        // For simplicity, let's just group existing data
+        appReceipts.forEach(r => {
+            const d = new Date(r.date);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const val = parseFloat((r.price || '0').replace(/[₩,]/g, '')) || 0;
+
+            if (!grouped[key]) grouped[key] = 0;
+            grouped[key] += val;
+        });
+
+        // Convert to array and sort
+        return Object.entries(grouped)
+            .map(([month, total]) => ({ month, total }))
+            .sort((a, b) => a.month.localeCompare(b.month)); // Oldest first for graph
+    };
+
+    const toggleAppExpand = (appName) => {
+        setExpandedApp(expandedApp === appName ? null : appName);
+    };
 
     // 4. Category statistics (Global) - Should show distribution of CURRENT filter?
     // If we want to allow clicking categories to filter, the stats should probably show
@@ -182,17 +245,7 @@ function App() {
                         <span className="date-hint">~ 오늘까지</span>
                     </div>
 
-                    <div className="view-mode-selector">
-                        <label htmlFor="viewMode">보기 모드:</label>
-                        <select
-                            id="viewMode"
-                            value={viewMode}
-                            onChange={(e) => setViewMode(e.target.value)}
-                        >
-                            <option value="detail">전체 기록 보기</option>
-                            <option value="monthly">월별 총액 보기</option>
-                        </select>
-                    </div>
+
 
                     <div className="category-filter">
                         <label htmlFor="categoryFilter">카테고리:</label>
@@ -229,121 +282,55 @@ function App() {
                 </div>
             </header>
 
-            {/* DETAIL VIEW DASHBOARD */}
-            {viewMode === 'detail' && (
-                <div className="detail-dashboard fade-in">
-                    <div className="left-column">
-                        <div className="card">
-                            <div className="stats-label">총 통합 지출</div>
-                            <div className="stats-value">
-                                ₩{total.toLocaleString()}
-                            </div>
-                        </div>
-                        <div className="card">
-                            <div className="stats-label">통합 구매 항목</div>
-                            <div className="stats-value">{filteredReceipts.length} 건</div>
-                        </div>
-                    </div>
-                    <div className="right-column">
-                        <div className="card category-card">
-                            <div className="stats-label">카테고리별 지출 (전체)</div>
-                            <div className="category-stats">
-                                {Object.entries(categoryStats).map(([cat, data]) => (
-                                    <div
-                                        key={cat}
-                                        className="category-stat-item"
-                                        style={{ cursor: 'pointer' }}
-                                        onClick={() => setCategoryFilter(cat === categoryFilter ? '전체' : cat)}
-                                        title="클릭하여 필터링"
-                                    >
-                                        <span
-                                            className="category-tag-inline"
-                                            style={{
-                                                backgroundColor: CATEGORY_COLORS[cat]?.bg,
-                                                color: CATEGORY_COLORS[cat]?.text,
-                                                borderColor: CATEGORY_COLORS[cat]?.border
-                                            }}
-                                        >
-                                            {cat} {cat === categoryFilter && '✓'}
-                                        </span>
-                                        <span className="category-amount">₩{data.total.toLocaleString()}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+            <div className="tab-container fade-in">
+                <div
+                    className={`tab-item ${viewMode === 'detail' ? 'active' : ''}`}
+                    onClick={() => setViewMode('detail')}
+                >
+                    전체 보기
                 </div>
-            )}
+                <div
+                    className={`tab-item ${viewMode === 'monthly' ? 'active' : ''}`}
+                    onClick={() => setViewMode('monthly')}
+                >
+                    월별 보기
+                </div>
+                <div
+                    className={`tab-item ${viewMode === 'top5' ? 'active' : ''}`}
+                    onClick={() => setViewMode('top5')}
+                >
+                    🏆 Top 5 앱
+                </div>
+            </div>
 
-            {/* MONTHLY VIEW DASHBOARD */}
-            {viewMode === 'monthly' && (
-                <div className="monthly-dashboard fade-in">
-                    <div className="left-column">
-                        <div className="chart-container" style={{ height: '100%', marginBottom: 0 }}>
-                            <h3 className="chart-title">월별 지출 추세</h3>
-                            <div className="bar-chart">
-                                {monthlyData.map((m) => (
-                                    <div
-                                        key={m.month}
-                                        className={`bar-wrapper ${expandedMonth === m.month ? 'active' : ''}`}
-                                        onClick={() => toggleMonth(m.month)}
-                                    >
-                                        <div className="bar-label">₩{m.total.toLocaleString()}</div>
-                                        <div
-                                            className="bar"
-                                            style={{ height: `${(m.total / maxMonthlyTotal) * 180}px` }}
-                                        />
-                                        <div className="bar-month">{m.month.split('-')[1]}월</div>
-                                    </div>
-                                ))}
+            {/* DETAIL VIEW DASHBOARD */}
+            {
+                viewMode === 'detail' && (
+                    <div className="detail-dashboard fade-in">
+                        <div className="left-column">
+                            <div className="card">
+                                <div className="stats-label">총 통합 지출</div>
+                                <div className="stats-value">
+                                    ₩{total.toLocaleString()}
+                                </div>
+                            </div>
+                            <div className="card">
+                                <div className="stats-label">통합 구매 항목</div>
+                                <div className="stats-value">{filteredReceipts.length} 건</div>
                             </div>
                         </div>
-                    </div>
-                    <div className="right-column">
-                        <div className="budget-section" style={{ marginBottom: 0 }}>
-                            <div className="budget-header">
-                                <span className="budget-label">이번 달 예산 <span style={{ fontWeight: 400, color: '#86868b' }}>({new Date().getMonth() + 1}월)</span></span>
-                                {showBudgetInput ? (
-                                    <div className="budget-input-group">
-                                        <input
-                                            type="number"
-                                            defaultValue={monthlyBudget}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') handleBudgetChange(e.target.value);
-                                                if (e.key === 'Escape') setShowBudgetInput(false);
-                                            }}
-                                            autoFocus
-                                        />
-                                        <button onClick={() => setShowBudgetInput(false)}>취소</button>
-                                    </div>
-                                ) : (
-                                    <button className="budget-edit-btn" onClick={() => setShowBudgetInput(true)}>
-                                        ₩{monthlyBudget.toLocaleString()} 변경
-                                    </button>
-                                )}
-                            </div>
-                            <div className="budget-bar-container">
-                                <div
-                                    className={`budget-bar ${budgetPercentage >= 100 ? 'danger' : budgetPercentage >= 80 ? 'warning' : ''}`}
-                                    style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
-                                />
-                            </div>
-                            <div className="budget-info">
-                                <span>₩{currentMonthSpending.toLocaleString()} / ₩{monthlyBudget.toLocaleString()}</span>
-                                <span className={`budget-percentage ${budgetPercentage >= 100 ? 'danger' : budgetPercentage >= 80 ? 'warning' : ''}`}>
-                                    {budgetPercentage}%
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="card category-card">
-                            <div className="stats-label">
-                                {expandedMonth ? `${formatMonthLabel(expandedMonth)} 지출` : '이번 달 지출'}
-                            </div>
-                            {Object.keys(monthlyCategoryStats).length > 0 ? (
+                        <div className="right-column">
+                            <div className="card category-card">
+                                <div className="stats-label">카테고리별 지출 (전체)</div>
                                 <div className="category-stats">
-                                    {Object.entries(monthlyCategoryStats).map(([cat, data]) => (
-                                        <div key={cat} className="category-stat-item">
+                                    {Object.entries(categoryStats).map(([cat, data]) => (
+                                        <div
+                                            key={cat}
+                                            className="category-stat-item"
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => setCategoryFilter(cat === categoryFilter ? '전체' : cat)}
+                                            title="클릭하여 필터링"
+                                        >
                                             <span
                                                 className="category-tag-inline"
                                                 style={{
@@ -352,115 +339,300 @@ function App() {
                                                     borderColor: CATEGORY_COLORS[cat]?.border
                                                 }}
                                             >
-                                                {cat}
+                                                {cat} {cat === categoryFilter && '✓'}
                                             </span>
                                             <span className="category-amount">₩{data.total.toLocaleString()}</span>
                                         </div>
                                     ))}
                                 </div>
-                            ) : (
-                                <div style={{ color: '#86868b', fontSize: '14px', textAlign: 'center', marginTop: '20px' }}>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* MONTHLY VIEW DASHBOARD */}
+            {
+                viewMode === 'monthly' && (
+                    <div className="monthly-dashboard fade-in">
+                        <div className="left-column">
+                            <div className="chart-container" style={{ height: '100%', marginBottom: 0 }}>
+                                <h3 className="chart-title">월별 지출 추세</h3>
+                                <div className="bar-chart">
+                                    {monthlyData.map((m) => (
+                                        <div
+                                            key={m.month}
+                                            className={`bar-wrapper ${expandedMonth === m.month ? 'active' : ''}`}
+                                            onClick={() => toggleMonth(m.month)}
+                                        >
+                                            <div className="bar-label">₩{m.total.toLocaleString()}</div>
+                                            <div
+                                                className="bar"
+                                                style={{ height: `${(m.total / maxMonthlyTotal) * 180}px` }}
+                                            />
+                                            <div className="bar-month">{m.month.split('-')[1]}월</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="right-column">
+                            <div className="budget-section" style={{ marginBottom: 0 }}>
+                                <div className="budget-header">
+                                    <span className="budget-label">이번 달 예산 <span style={{ fontWeight: 400, color: '#86868b' }}>({new Date().getMonth() + 1}월)</span></span>
+                                    {showBudgetInput ? (
+                                        <div className="budget-input-group">
+                                            <input
+                                                type="number"
+                                                defaultValue={monthlyBudget}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') handleBudgetChange(e.target.value);
+                                                    if (e.key === 'Escape') setShowBudgetInput(false);
+                                                }}
+                                                autoFocus
+                                            />
+                                            <button onClick={() => setShowBudgetInput(false)}>취소</button>
+                                        </div>
+                                    ) : (
+                                        <button className="budget-edit-btn" onClick={() => setShowBudgetInput(true)}>
+                                            ₩{monthlyBudget.toLocaleString()} 변경
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="budget-bar-container">
+                                    <div
+                                        className={`budget-bar ${budgetPercentage >= 100 ? 'danger' : budgetPercentage >= 80 ? 'warning' : ''}`}
+                                        style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
+                                    />
+                                </div>
+                                <div className="budget-info">
+                                    <span>₩{currentMonthSpending.toLocaleString()} / ₩{monthlyBudget.toLocaleString()}</span>
+                                    <span className={`budget-percentage ${budgetPercentage >= 100 ? 'danger' : budgetPercentage >= 80 ? 'warning' : ''}`}>
+                                        {budgetPercentage}%
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="card category-card">
+                                <div className="stats-label">
+                                    {expandedMonth ? `${formatMonthLabel(expandedMonth)} 지출` : '이번 달 지출'}
+                                </div>
+                                {Object.keys(monthlyCategoryStats).length > 0 ? (
+                                    <div className="category-stats">
+                                        {Object.entries(monthlyCategoryStats).map(([cat, data]) => (
+                                            <div key={cat} className="category-stat-item">
+                                                <span
+                                                    className="category-tag-inline"
+                                                    style={{
+                                                        backgroundColor: CATEGORY_COLORS[cat]?.bg,
+                                                        color: CATEGORY_COLORS[cat]?.text,
+                                                        borderColor: CATEGORY_COLORS[cat]?.border
+                                                    }}
+                                                >
+                                                    {cat}
+                                                </span>
+                                                <span className="category-amount">₩{data.total.toLocaleString()}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{ color: '#86868b', fontSize: '14px', textAlign: 'center', marginTop: '20px' }}>
+                                        데이터가 없습니다.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* TOP 5 APPS DASHBOARD */}
+            {
+                viewMode === 'top5' && (
+                    <div className="top5-dashboard fade-in">
+                        <div className="rank-header">
+                            <h2>🏆 지출 상위 5개 앱</h2>
+                            <p style={{ color: '#86868b' }}>가장 많이 지출한 앱을 분석합니다.</p>
+                        </div>
+
+                        <div className="rank-list">
+                            {topAppsData.map((app, index) => (
+                                <div
+                                    key={app.name}
+                                    className={`rank-item ${expandedApp === app.name ? 'expanded' : ''}`}
+                                    onClick={() => toggleAppExpand(app.name)}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className="rank-row-top">
+                                        <div className="rank-app-info">
+                                            <div
+                                                className="rank-icon"
+                                                style={{
+                                                    backgroundColor: CATEGORY_COLORS[app.category]?.bg || '#f5f5f7',
+                                                    color: CATEGORY_COLORS[app.category]?.text || '#666'
+                                                }}
+                                            >
+                                                {CATEGORY_ICONS[app.category] || '📦'}
+                                            </div>
+                                            <div className="rank-details">
+                                                <h3>{index + 1}. {app.name}</h3>
+                                                <span className="rank-badge" style={{
+                                                    color: CATEGORY_COLORS[app.category]?.text,
+                                                    borderColor: CATEGORY_COLORS[app.category]?.border
+                                                }}>{app.category}</span>
+                                            </div>
+                                        </div>
+                                        <div className="rank-amount">
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div>₩{app.total.toLocaleString()}</div>
+                                                <div style={{ fontSize: '11px', color: '#86868b', fontWeight: 400 }}>
+                                                    {expandedApp === app.name ? '▲ 접기' : '▼ 월별 보기'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="rank-bar-bg">
+                                        <div
+                                            className="rank-bar-fill"
+                                            style={{
+                                                width: `${(app.total / maxTopAppTotal) * 100}%`,
+                                                backgroundColor: CATEGORY_COLORS[app.category]?.text || '#666'
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Drill-down Chart */}
+                                    {expandedApp === app.name && (
+                                        <div className="app-monthly-chart fade-in" onClick={(e) => e.stopPropagation()}>
+                                            <div className="mini-chart-container">
+                                                {getAppMonthlyData(app.name).map(d => (
+                                                    <div key={d.month} className="mini-bar-wrapper">
+                                                        <div className="mini-bar-label">₩{d.total.toLocaleString()}</div>
+                                                        <div
+                                                            className="mini-bar"
+                                                            style={{
+                                                                height: `${Math.max((d.total / (Math.max(...getAppMonthlyData(app.name).map(x => x.total)) || 1)) * 100, 4)}px`,
+                                                                backgroundColor: CATEGORY_COLORS[app.category]?.text || '#666'
+                                                            }}
+                                                        />
+                                                        <div className="mini-bar-month">{d.month.split('-')[1]}월</div>
+                                                    </div>
+                                                ))}
+                                                {getAppMonthlyData(app.name).length === 0 && (
+                                                    <div style={{ padding: '20px', color: '#86868b' }}>데이터가 부족합니다.</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                            {topAppsData.length === 0 && (
+                                <div style={{ textAlign: 'center', color: '#86868b', padding: '40px' }}>
                                     데이터가 없습니다.
                                 </div>
                             )}
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Detail View (current mode) */}
-            {viewMode === 'detail' && (
-                <div className="receipt-list fade-in" style={{ animationDelay: '0.3s' }}>
-                    {filteredReceipts.length === 0 ? (
-                        <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>
-                            {loading ? 'iCloud 및 Gmail에서 영수증을 가져오고 있습니다...' :
-                                receipts.length === 0 ? '동기화 버튼을 눌러 Apple & Samsung 영수증을 통합 관리하세요.' :
-                                    '선택한 카테고리에 해당하는 영수증이 없습니다.'}
-                        </div>
-                    ) : (
-                        filteredReceipts.map((receipt, index) => (
-                            <div key={`${receipt.uid}-${index}`} className="receipt-item">
-                                <div className="receipt-info">
-                                    <div className="brand-tag-container">
-                                        <span className={`brand-tag ${receipt.platform.toLowerCase()}`}>
-                                            {receipt.platform}
-                                        </span>
-                                        <span
-                                            className="category-tag"
-                                            style={{
-                                                backgroundColor: CATEGORY_COLORS[receipt.category]?.bg,
-                                                color: CATEGORY_COLORS[receipt.category]?.text,
-                                                borderColor: CATEGORY_COLORS[receipt.category]?.border
-                                            }}
-                                        >
-                                            {receipt.category}
-                                        </span>
-                                        <h3 className="app-name">{receipt.appName || '알 수 없음'}</h3>
-                                    </div>
-                                    <p className="product-name">{receipt.productName}</p>
-                                    <p className="date-info">
-                                        {new Date(receipt.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
-                                        {receipt.orderId && <span className="order-id"> · {receipt.orderId}</span>}
-                                    </p>
-                                </div>
-                                <div className="receipt-price">{receipt.price || '금액 미확인'}</div>
+            {
+                viewMode === 'detail' && (
+                    <div className="receipt-list fade-in" style={{ animationDelay: '0.3s' }}>
+                        {filteredReceipts.length === 0 ? (
+                            <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>
+                                {loading ? 'iCloud 및 Gmail에서 영수증을 가져오고 있습니다...' :
+                                    receipts.length === 0 ? '동기화 버튼을 눌러 Apple & Samsung 영수증을 통합 관리하세요.' :
+                                        '선택한 카테고리에 해당하는 영수증이 없습니다.'}
                             </div>
-                        ))
-                    )}
-                </div>
-            )}
+                        ) : (
+                            filteredReceipts.map((receipt, index) => (
+                                <div key={`${receipt.uid}-${index}`} className="receipt-item">
+                                    <div className="receipt-info">
+                                        <div className="brand-tag-container">
+                                            <span className={`brand-tag ${receipt.platform.toLowerCase()}`}>
+                                                {receipt.platform}
+                                            </span>
+                                            <span
+                                                className="category-tag"
+                                                style={{
+                                                    backgroundColor: CATEGORY_COLORS[receipt.category]?.bg,
+                                                    color: CATEGORY_COLORS[receipt.category]?.text,
+                                                    borderColor: CATEGORY_COLORS[receipt.category]?.border
+                                                }}
+                                            >
+                                                {receipt.category}
+                                            </span>
+                                            <h3 className="app-name">{receipt.appName || '알 수 없음'}</h3>
+                                        </div>
+                                        <p className="product-name">{receipt.productName}</p>
+                                        <p className="date-info">
+                                            {new Date(receipt.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                            {receipt.orderId && <span className="order-id"> · {receipt.orderId}</span>}
+                                        </p>
+                                    </div>
+                                    <div className="receipt-price">{receipt.price || '금액 미확인'}</div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )
+            }
 
             {/* Monthly View with Drill-down */}
-            {viewMode === 'monthly' && (
-                <div className="receipt-list fade-in" style={{ animationDelay: '0.3s' }}>
-                    {monthlyData.length === 0 ? (
-                        <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>
-                            {loading ? 'iCloud 및 Gmail에서 영수증을 가져오고 있습니다...' : '동기화 버튼을 눌러 Apple & Samsung 영수증을 통합 관리하세요.'}
-                        </div>
-                    ) : (
-                        monthlyData.map((m) => (
-                            <div key={m.month} className="monthly-group">
-                                <div
-                                    className={`monthly-header ${expandedMonth === m.month ? 'expanded' : ''}`}
-                                    onClick={() => toggleMonth(m.month)}
-                                >
-                                    <div className="monthly-info">
-                                        <h3>{formatMonthLabel(m.month)}</h3>
-                                        <span className="monthly-count">{m.count}건</span>
-                                    </div>
-                                    <div className="monthly-total">
-                                        ₩{m.total.toLocaleString()}
-                                        <span className="expand-icon">{expandedMonth === m.month ? '▲' : '▼'}</span>
-                                    </div>
-                                </div>
-                                {expandedMonth === m.month && (
-                                    <div className="monthly-details">
-                                        {m.items.map((receipt, index) => (
-                                            <div key={`${receipt.uid}-${index}`} className="receipt-item sub-item">
-                                                <div className="receipt-info">
-                                                    <div className="brand-tag-container">
-                                                        <span className={`brand-tag ${receipt.platform.toLowerCase()}`}>
-                                                            {receipt.platform}
-                                                        </span>
-                                                        <h3 className="app-name">{receipt.appName || '알 수 없음'}</h3>
-                                                    </div>
-                                                    <p className="product-name">{receipt.productName}</p>
-                                                    <p className="date-info">
-                                                        {new Date(receipt.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
-                                                        {receipt.orderId && <span className="order-id"> · {receipt.orderId}</span>}
-                                                    </p>
-                                                </div>
-                                                <div className="receipt-price">{receipt.price || '금액 미확인'}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+            {
+                viewMode === 'monthly' && (
+                    <div className="receipt-list fade-in" style={{ animationDelay: '0.3s' }}>
+                        {monthlyData.length === 0 ? (
+                            <div style={{ padding: '60px', textAlign: 'center', color: '#86868b' }}>
+                                {loading ? 'iCloud 및 Gmail에서 영수증을 가져오고 있습니다...' : '동기화 버튼을 눌러 Apple & Samsung 영수증을 통합 관리하세요.'}
                             </div>
-                        ))
-                    )}
-                </div>
-            )}
-        </div>
+                        ) : (
+                            monthlyData.map((m) => (
+                                <div key={m.month} className="monthly-group">
+                                    <div
+                                        className={`monthly-header ${expandedMonth === m.month ? 'expanded' : ''}`}
+                                        onClick={() => toggleMonth(m.month)}
+                                    >
+                                        <div className="monthly-info">
+                                            <h3>{formatMonthLabel(m.month)}</h3>
+                                            <span className="monthly-count">{m.count}건</span>
+                                        </div>
+                                        <div className="monthly-total">
+                                            ₩{m.total.toLocaleString()}
+                                            <span className="expand-icon">{expandedMonth === m.month ? '▲' : '▼'}</span>
+                                        </div>
+                                    </div>
+                                    {expandedMonth === m.month && (
+                                        <div className="monthly-details">
+                                            {m.items.map((receipt, index) => (
+                                                <div key={`${receipt.uid}-${index}`} className="receipt-item sub-item">
+                                                    <div className="receipt-info">
+                                                        <div className="brand-tag-container">
+                                                            <span className={`brand-tag ${receipt.platform.toLowerCase()}`}>
+                                                                {receipt.platform}
+                                                            </span>
+                                                            <h3 className="app-name">{receipt.appName || '알 수 없음'}</h3>
+                                                        </div>
+                                                        <p className="product-name">{receipt.productName}</p>
+                                                        <p className="date-info">
+                                                            {new Date(receipt.date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                                            {receipt.orderId && <span className="order-id"> · {receipt.orderId}</span>}
+                                                        </p>
+                                                    </div>
+                                                    <div className="receipt-price">{receipt.price || '금액 미확인'}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                )
+            }
+        </div >
     );
 }
 
