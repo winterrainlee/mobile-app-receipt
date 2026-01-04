@@ -5,6 +5,12 @@ Apple App Store와 Samsung Galaxy Store 영수증을 통합 관리하는 웹 애
 ![Version](https://img.shields.io/badge/version-3.3-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+## 📸 스크린샷
+
+| 전체 내역 모드 | 월별 요약 모드 |
+|:---:|:---:|
+| <img src="assets/screenshot_detail.png" width="400" /> | <img src="assets/screenshot_monthly.png" width="400" /> |
+
 ## ✨ 주요 기능
 
 - **🔄 통합 동기화**: iCloud(Apple)와 Gmail(Samsung) 이메일에서 영수증 자동 수집
