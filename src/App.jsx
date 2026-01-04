@@ -42,7 +42,12 @@ function App() {
     const syncReceipts = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`/api/sync?startDate=${startDate}`);
+            // Check for demo mode via URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const isDemo = urlParams.get('demo') === 'true';
+
+            const endpoint = isDemo ? '/api/demo' : `/api/sync?startDate=${startDate}`;
+            const response = await fetch(endpoint);
             const data = await response.json();
             setReceipts(data);
 

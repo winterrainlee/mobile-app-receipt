@@ -53,6 +53,62 @@ const getSyncData = async (startDate) => {
     return allItems;
 };
 
+// Demo data generator for README screenshots
+const generateDummyData = () => {
+    const apps = [
+        { platform: 'Apple', appName: 'Game Plus', products: ['월간 구독권', '스타터 팩', '보석 500개'] },
+        { platform: 'Apple', appName: 'Music Pro', products: ['프리미엄 구독', '고음질 패키지'] },
+        { platform: 'Apple', appName: 'Photo Editor', products: ['필터 팩', '프로 기능 해제', '클라우드 저장소'] },
+        { platform: 'Samsung', appName: 'Fitness Tracker', products: ['연간 멤버십', '개인 코치', '식단 플래너'] },
+        { platform: 'Samsung', appName: 'Study Notes', products: ['광고 제거', '무제한 노트', 'PDF 내보내기'] },
+        { platform: 'Apple', appName: 'Weather Live', products: ['프리미엄 업그레이드', '위젯 팩'] },
+        { platform: 'Samsung', appName: 'Video Player', products: ['4K 지원', '자막 다운로드'] },
+        { platform: 'Apple', appName: 'Task Manager', products: ['팀 협업', '캘린더 연동'] }
+    ];
+
+    const prices = [1000, 1200, 2200, 3300, 4400, 5500, 6500, 7700, 9900, 12000, 15000];
+    const items = [];
+    const now = new Date();
+
+    // Generate 25 dummy receipts over the past 3 months
+    for (let i = 0; i < 25; i++) {
+        const app = apps[Math.floor(Math.random() * apps.length)];
+        const product = app.products[Math.floor(Math.random() * app.products.length)];
+        const price = prices[Math.floor(Math.random() * prices.length)];
+
+        // Random date within last 3 months
+        const daysAgo = Math.floor(Math.random() * 90);
+        const date = new Date(now);
+        date.setDate(date.getDate() - daysAgo);
+
+        items.push({
+            uid: `demo-${i + 1}`,
+            platform: app.platform,
+            subject: `${app.appName} 구매 확인`,
+            date: date.toISOString(),
+            orderId: `${app.platform === 'Apple' ? 'ML' : 'GS'}${String(Math.floor(Math.random() * 900000000) + 100000000)}`,
+            appName: app.appName,
+            productName: product,
+            price: `₩${price.toLocaleString()}`
+        });
+    }
+
+    // Sort by date descending
+    items.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return items;
+};
+
+// Demo endpoint for README screenshots
+app.get('/api/demo', (req, res) => {
+    try {
+        const dummyData = generateDummyData();
+        res.json(dummyData);
+    } catch (error) {
+        console.error('Error generating demo data:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/sync', async (req, res) => {
     try {
         const startDate = getStartDate(req.query.startDate);
