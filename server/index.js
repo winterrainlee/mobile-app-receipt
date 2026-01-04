@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import ExcelJS from 'exceljs';
+import axios from 'axios';
 import { fetchAllReceipts } from './imap-client.js';
 import { parseReceipt } from './receipt-parser.js';
 
@@ -12,6 +13,89 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
+
+// In-memory cache for app categories
+const categoryCache = new Map();
+
+// Keyword-based fallback (Legacy logic moved to backend)
+const getFallbackCategory = (appName) => {
+    const lowerName = appName.toLowerCase();
+    const keywords = {
+        '게임': ['game', 'games', '게임', 'play', 'quest', 'clash', 'puzzle', 'plus'],
+        '생산성': ['task', 'notes', 'office', 'work', 'manager', 'editor', 'study'],
+        '엔터': ['music', 'video', 'photo', 'player', 'stream', 'media'],
+        '건강': ['fitness', 'health', 'workout', 'tracker', 'diet'],
+    };
+
+    for (const [category, kws] of Object.entries(keywords)) {
+        if (kws.some(kw => lowerName.includes(kw))) return category;
+    }
+    return '기타';
+};
+
+// Fetch category from iTunes Search API
+const fetchAppCategory = async (appName) => {
+    if (!appName) return '기타';
+
+    // Check cache first
+    if (categoryCache.has(appName)) {
+        return categoryCache.get(appName);
+    }
+
+    try {
+        console.log(`Searching category for: ${appName}`);
+        const response = await axios.get('https://itunes.apple.com/search', {
+            params: {
+                term: appName,
+                entity: 'software',
+                limit: 1,
+                country: 'kr',
+                lang: 'en_us' // Request English response
+            },
+            timeout: 3000 // 3s timeout
+        });
+
+        if (response.data.resultCount > 0) {
+            const rawGenre = response.data.results[0].primaryGenreName;
+            const genre = rawGenre.toLowerCase(); // Normalized for matching
+            let category = '기타';
+
+            // Map iTunes genres to our categories (English & Korean keywords)
+            // Games
+            if (['games', 'action', 'rpg', 'arcade', 'adventure', 'strategy', 'simulation', 'puzzle', 'board', 'card', 'casino', 'casual', 'racing', 'sports', 'trivia', 'word',
+                '게임', '액션', '롤플레잉', '아케이드', '어드벤처', '전략', '시뮬레이션', '퍼즐', '보드', '카드', '카지노', '캐주얼', '레이싱', '스포츠'].some(g => genre.includes(g))) {
+                category = '게임';
+            }
+            // Productivity & Utility
+            else if (['productivity', 'utilities', 'business', 'education', 'reference', 'finance', 'news', 'navigation', 'books', 'magazines',
+                '생산성', '유틸리티', '비즈니스', '교육', '참고', '금융', '뉴스', '내비게이션', '도서'].some(g => genre.includes(g))) {
+                category = '생산성';
+            }
+            // Entertainment
+            else if (['music', 'entertainment', 'photo', 'video', 'social', 'lifestyle', 'travel', 'food', 'drink', 'shopping',
+                '음악', '엔터테인먼트', '사진', '비디오', '소셜', '라이프스타일', '여행', '음식'].some(g => genre.includes(g))) {
+                category = '엔터';
+            }
+            // Health
+            else if (['health', 'fitness', 'medical', 'sports',
+                '건강', '피트니스', '의료'].some(g => genre.includes(g))) {
+                category = '건강';
+            }
+
+            console.log(`Found category for ${appName}: ${rawGenre} -> ${category}`);
+            categoryCache.set(appName, category);
+            return category;
+        }
+    } catch (error) {
+        console.warn(`Failed to fetch category for ${appName}:`, error.message);
+    }
+
+    // Fallback if API fails or no result
+    const fallback = getFallbackCategory(appName);
+    console.log(`Using fallback for ${appName}: ${fallback}`);
+    categoryCache.set(appName, fallback);
+    return fallback;
+};
 
 // Parse startDate from query or default to 3 months ago
 const getStartDate = (queryDate) => {
@@ -31,10 +115,13 @@ const getSyncData = async (startDate) => {
 
     const allItems = [];
 
-    rawReceipts.forEach(r => {
+    // Process receipts sequentially to handle async category fetching
+    for (const r of rawReceipts) {
         const parsed = parseReceipt(r.html);
 
-        parsed.items.forEach(item => {
+        for (const item of parsed.items) {
+            const category = await fetchAppCategory(item.appName);
+
             allItems.push({
                 uid: r.uid,
                 platform: r.platform,
@@ -43,10 +130,11 @@ const getSyncData = async (startDate) => {
                 orderId: parsed.orderId,
                 appName: item.appName,
                 productName: item.productName,
-                price: item.price
+                price: item.price,
+                category: category // Added field
             });
-        });
-    });
+        }
+    }
 
     // Sort by date descending
     allItems.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -56,14 +144,14 @@ const getSyncData = async (startDate) => {
 // Demo data generator for README screenshots
 const generateDummyData = () => {
     const apps = [
-        { platform: 'Apple', appName: 'Game Plus', products: ['월간 구독권', '스타터 팩', '보석 500개'] },
-        { platform: 'Apple', appName: 'Music Pro', products: ['프리미엄 구독', '고음질 패키지'] },
-        { platform: 'Apple', appName: 'Photo Editor', products: ['필터 팩', '프로 기능 해제', '클라우드 저장소'] },
-        { platform: 'Samsung', appName: 'Fitness Tracker', products: ['연간 멤버십', '개인 코치', '식단 플래너'] },
-        { platform: 'Samsung', appName: 'Study Notes', products: ['광고 제거', '무제한 노트', 'PDF 내보내기'] },
-        { platform: 'Apple', appName: 'Weather Live', products: ['프리미엄 업그레이드', '위젯 팩'] },
-        { platform: 'Samsung', appName: 'Video Player', products: ['4K 지원', '자막 다운로드'] },
-        { platform: 'Apple', appName: 'Task Manager', products: ['팀 협업', '캘린더 연동'] }
+        { platform: 'Apple', appName: 'Game Plus', products: ['월간 구독권', '스타터 팩', '보석 500개'], category: '게임' },
+        { platform: 'Apple', appName: 'Music Pro', products: ['프리미엄 구독', '고음질 패키지'], category: '엔터' },
+        { platform: 'Apple', appName: 'Photo Editor', products: ['필터 팩', '프로 기능 해제', '클라우드 저장소'], category: '엔터' },
+        { platform: 'Samsung', appName: 'Fitness Tracker', products: ['연간 멤버십', '개인 코치', '식단 플래너'], category: '건강' },
+        { platform: 'Samsung', appName: 'Study Notes', products: ['광고 제거', '무제한 노트', 'PDF 내보내기'], category: '생산성' },
+        { platform: 'Apple', appName: 'Weather Live', products: ['프리미엄 업그레이드', '위젯 팩'], category: '생산성' },
+        { platform: 'Samsung', appName: 'Video Player', products: ['4K 지원', '자막 다운로드'], category: '엔터' },
+        { platform: 'Apple', appName: 'Task Manager', products: ['팀 협업', '캘린더 연동'], category: '생산성' }
     ];
 
     const prices = [1000, 1200, 2200, 3300, 4400, 5500, 6500, 7700, 9900, 12000, 15000];
@@ -89,7 +177,8 @@ const generateDummyData = () => {
             orderId: `${app.platform === 'Apple' ? 'ML' : 'GS'}${String(Math.floor(Math.random() * 900000000) + 100000000)}`,
             appName: app.appName,
             productName: product,
-            price: `₩${price.toLocaleString()}`
+            price: `₩${price.toLocaleString()}`,
+            category: app.category // Include preset category
         });
     }
 
