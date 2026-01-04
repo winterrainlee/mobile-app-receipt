@@ -129,3 +129,8 @@ npm run dev
 | ì›”ë³„ ë³´ê¸° (í•„í„°ë§ ì ìš©) | ì˜ˆì‚° ê´€ë¦¬ í†µí•© |
 |-------------------------|----------------|
 | ![Monthly View](docs/screenshots/monthly_view.png) | ![Budget Section](docs/screenshots/budget_section.png) |
+
+## ?? ¶óÀÌ¼±½º (License)
+
+ÀÌ ÇÁ·ÎÁ§Æ®´Â **MIT License**¿¡ µû¶ó ÀÚÀ¯·Ó°Ô »ç¿ë, ¼öÁ¤, ¹èÆ÷ÇÒ ¼ö ÀÖ½À´Ï´Ù.
+ÀÚ¼¼ÇÑ ³»¿ëÀº [LICENSE](LICENSE) ÆÄÀÏÀ» Âü°íÇÏ¼¼¿ä.
