@@ -130,7 +130,7 @@ npm run dev
 |-------------------------|----------------|
 | ![Monthly View](docs/screenshots/monthly_view.png) | ![Budget Section](docs/screenshots/budget_section.png) |
 
-## ?? ¶óÀÌ¼±½º (License)
+## ğŸ“ ë¼ì´ì„ ìŠ¤ (License)
 
-ÀÌ ÇÁ·ÎÁ§Æ®´Â **MIT License**¿¡ µû¶ó ÀÚÀ¯·Ó°Ô »ç¿ë, ¼öÁ¤, ¹èÆ÷ÇÒ ¼ö ÀÖ½À´Ï´Ù.
-ÀÚ¼¼ÇÑ ³»¿ëÀº [LICENSE](LICENSE) ÆÄÀÏÀ» Âü°íÇÏ¼¼¿ä.
+ì´ í”„ë¡œì íŠ¸ëŠ” **MIT License**ì— ë”°ë¼ ììœ ë¡­ê²Œ ì‚¬ìš©, ìˆ˜ì •, ë°°í¬í•  ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+ìì„¸í•œ ë‚´ìš©ì€ [LICENSE](LICENSE) íŒŒì¼ì„ ì°¸ê³ í•˜ì„¸ìš”.
