@@ -13,3 +13,12 @@
 ## Windows Node.js 프로세스 종료 문제
 - `cmd /c "npm run server"` 실행 시 부모 cmd를 종료해도 node.exe가 살아남을 수 있음
 - **해결**: `taskkill /F /IM node.exe`로 모든 Node 프로세스 강제 종료 후 재시작
+
+## 모바일 반응형 차트 구현
+- 데이터가 많은 차트를 모바일에서 보여줄 때 단순히 사이즈를 줄이면 가독성이 떨어짐
+- **해결**: `overflow-x: auto`와 `min-width`를 활용해 가로 스크롤을 구현. 사용자는 스 와이프하여 전체 데이터를 쾌적하게 열람 가능.
+- CSS: `.chart-container { overflow-x: auto; }` + `.bar-chart { min-width: 100%; width: max-content; }`
+
+## CSS 클래스명 일치 확인
+- 미디어 쿼리 작성 시 실제 컴포넌트에서 사용하는 클래스명과 일치하는지 반드시 확인
+- 개발 도중 클래스명이 바뀌었으나 미디어 쿼리가 업데이트되지 않아 레이아웃이 깨지는 경우 발생 (예: `.dashboard-grid` -> `.detail-dashboard`)
